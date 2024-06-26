@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "substance-widget"
+version = "0.1.0"
+description = "A research data model based ipywidget for querying chemical substances."
+authors = ["Torsten Giess <torsten.giess@ibtb.uni-stuttgart.de>"]
+license = "LICENSE"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+ipywidgets = "^8.1.3"
+rdkit = "^2024.3.1"
+PubChemPy = "^1.0.4"
+sdrdm = {git = "https://github.com/JR-1991/software-driven-rdm.git"}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
