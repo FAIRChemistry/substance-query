@@ -1,17 +1,13 @@
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 from uuid import uuid4
 
 import sdRDM
 from lxml.etree import _Element
 from pydantic import PrivateAttr, model_validator
 from pydantic_xml import attr, element
-from sdRDM.base.datatypes import Identifier
 from sdRDM.base.listplus import ListPlus
 from sdRDM.base.utils import forge_signature
 from sdRDM.tools.utils import elem2dict
-
-from .analyticaldata import AnalyticalData
-from .preparationprocedure import PreparationProcedure
 
 
 @forge_signature
@@ -35,13 +31,6 @@ class Substance(
         json_schema_extra=dict(),
     )
 
-    substance_id: Optional[Identifier] = element(
-        description="Identifier of the substance.",
-        default=None,
-        tag="substance_id",
-        json_schema_extra=dict(),
-    )
-
     iupac_name: Optional[str] = element(
         description="IUPAC name of the substance.",
         default=None,
@@ -58,6 +47,15 @@ class Substance(
         tag="canonical_smiles",
         json_schema_extra=dict(
             regex="/^([^J][a-z0-9@+\-\[\]\(\)\\\/%=#$]{6,})$/ig",
+        ),
+    )
+
+    inchi: Optional[str] = element(
+        description="IUPAC International Chemical Identifier (InChI) of the substance.",
+        default=None,
+        tag="inchi",
+        json_schema_extra=dict(
+            regex="/^((InChI=)?[^J][0-9BCOHNSOPrIFla+\-\(\)\\\/,pqbtmsih]{6,})$/ig",
         ),
     )
 
@@ -86,20 +84,11 @@ class Substance(
         json_schema_extra=dict(),
     )
 
-    preparation_procedure: Optional[PreparationProcedure] = element(
-        description="Procedure used to prepare the substance.",
-        default_factory=PreparationProcedure,
-        tag="preparation_procedure",
+    manufacturer: Optional[str] = element(
+        description="Manufacturer of the substance.",
+        default=None,
+        tag="manufacturer",
         json_schema_extra=dict(),
-    )
-
-    analytical_data: List[AnalyticalData] = element(
-        description="Analytical data of the substance.",
-        default_factory=ListPlus,
-        tag="analytical_data",
-        json_schema_extra=dict(
-            multiple=True,
-        ),
     )
 
     _repo: Optional[str] = PrivateAttr(
@@ -122,36 +111,3 @@ class Substance(
                 self._raw_xml_data[attr] = elem2dict(value)
 
         return self
-
-    def add_to_analytical_data(
-        self,
-        label: Optional[str] = None,
-        analytical_method: Optional[str] = None,
-        analytics_id: Optional[Identifier] = None,
-        id: Optional[str] = None,
-        **kwargs,
-    ) -> AnalyticalData:
-        """
-        This method adds an object of type 'AnalyticalData' to attribute analytical_data
-
-        Args:
-            id (str): Unique identifier of the 'AnalyticalData' object. Defaults to 'None'.
-            label (): Label of the analytical data.. Defaults to None
-            analytical_method (): Method used to obtain the analytical data.. Defaults to None
-            analytics_id (): Identifier of the analytical data.. Defaults to None
-        """
-
-        params = {
-            "label": label,
-            "analytical_method": analytical_method,
-            "analytics_id": analytics_id,
-        }
-
-        if id is not None:
-            params["id"] = id
-
-        obj = AnalyticalData(**params)
-
-        self.analytical_data.append(obj)
-
-        return self.analytical_data[-1]

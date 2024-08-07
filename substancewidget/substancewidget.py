@@ -4,6 +4,7 @@ the substance's information.
 """
 
 from os import wait
+import re
 
 from IPython.display import display
 from click import style
@@ -15,10 +16,19 @@ import pubchempy as pcp
 from . import Substance
 
 
+RE_SMILES = re.compile(r"/^([^J][a-z0-9@+\-\[\]\(\)\\\/%=#$]{6,})$/ig")
+RE_INCHI = re.compile(
+    r"/^((InChI=)?[^J][0-9BCOHNSOPrIFla+\-\(\)\\\/,pqbtmsih]{6,})$/ig"
+)
+RE_INCHIKEY = re.compile(r"/^([0-9A-Z\-]+)$/")
+
+
 class SubstanceWidget:
     def __init__(self, substance_data_model: Substance = None) -> Substance:
-        self.data_model = substance_data_model
-        self.query_compound = ""
+        if not substance_data_model:
+            substance_data_model = Substance()
+        self.substance = substance_data_model
+        self.query = ""
         self.compounds = []
         self.selected_compound = None
 
@@ -26,10 +36,10 @@ class SubstanceWidget:
         title_label = widgets.Label(value="Search for a compound:")
 
         # Create the text input widget for the search query
-        text_input = widgets.Text(placeholder="Enter compound name")
+        text_input = widgets.Text(placeholder="Enter name, CID, SMILES, or InChI(Key)")
 
         # Create the search button
-        search_button = widgets.Button(description="Search")
+        search_button = widgets.Button(description="Search PubChem")
 
         # Create the compound dropdown widget for the search results
         compound_dropdown = widgets.Dropdown(
@@ -45,8 +55,19 @@ class SubstanceWidget:
 
         # Define a function to handle the search button click event
         def on_search_button_click(b):
-            self.query_compound = text_input.value
-            self.compounds = self._query_pubchem(self.query_compound)
+            del self.compounds[:]
+            self.query = text_input.value
+            match self.query:
+                case self.query if self.query.isdigit():
+                    self.compounds.append(pcp.Compound.from_cid(self.query))
+                case self.query if RE_SMILES.match(self.query):
+                    self.compounds = pcp.get_compounds(self.query, "smiles")
+                case self.query if RE_INCHI.match(self.query):
+                    self.compounds = pcp.get_compounds(self.query, "inchi")
+                case self.query if RE_INCHIKEY.match(self.query):
+                    self.compounds = pcp.get_compounds(self.query, "inchikey")
+                case _:
+                    self.compounds = pcp.get_compounds(self.query, "name")
             compound_dropdown.options = [
                 compound.iupac_name.capitalize() for compound in self.compounds
             ]
@@ -65,6 +86,19 @@ class SubstanceWidget:
                     compound_dropdown.options.index(compound_name)
                 ]
                 self._display_compound(self.selected_compound)
+                self.substance.id = "https://pubchem.ncbi.nlm.nih.gov/compound/" + str(
+                    self.selected_compound.cid
+                )
+                self.substance.iupac_name = (
+                    self.selected_compound.iupac_name.capitalize()
+                )
+                self.substance.canonical_smiles = (
+                    self.selected_compound.canonical_smiles
+                )
+                self.substance.inchi_key = self.selected_compound.inchikey
+                self.substance.molecular_weight = (
+                    self.selected_compound.molecular_weight
+                )
 
         # Attach the function to the dropdown change event
         compound_dropdown.observe(on_compound_dropdown_change, names="value")
@@ -77,19 +111,8 @@ class SubstanceWidget:
         # Display the container
         display(container)
 
-    # Create the function to query PubChem
-    @staticmethod
-    def _query_pubchem(compound_name):
-        """
-        Get a compound by its name.
-
-        Args:
-            compound_name: The name of the compound to search for.
-
-        Returns:
-            A list of compounds that match the name.
-        """
-        return pcp.get_compounds(compound_name, "name")
+    def get_substance_data_model(self) -> Substance:
+        return self.substance
 
     @staticmethod
     def _display_compound(compound):
@@ -105,5 +128,9 @@ class SubstanceWidget:
         display(widgets.HTML(value=f"<b>Structure:</b>"))
         display(image)
         display(widgets.HTML(value=f"<b>Other names:</b>"))
-        for name in synonyms:
+        for i, name in enumerate(synonyms):
+            if i >= 9:
+                display(widgets.HTML(value="..."))
+                break
             display(widgets.HTML(value=f"{name}"))
+            i += 1

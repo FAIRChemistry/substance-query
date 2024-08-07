@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "substance-widget"
+name = "substancewidget"
 version = "0.1.0"
 description = "A research data model based ipywidget for querying chemical substances."
 authors = ["Torsten Giess <torsten.giess@ibtb.uni-stuttgart.de>"]

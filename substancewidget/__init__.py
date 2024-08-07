@@ -1,8 +1,5 @@
 import os
 
-from .core.analyticaldata import AnalyticalData
-from .core.preparationprocedure import PreparationProcedure
-from .core.preparationstep import PreparationStep
 from .core.substance import Substance
 
 __URL__ = "https://github.com/FAIRChemistry/substance-widget"
